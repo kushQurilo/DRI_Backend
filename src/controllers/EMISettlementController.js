@@ -26,6 +26,7 @@ exports.EMISettlement = async (req, res) => {
         Settlement_Percent:
           element?.SettlementPercent || element?.settlementpercent || "",
         totalEMI: element?.TotalEMI || element?.totalemi || "",
+        monthlyEmi: element?.MonthlyEmi || element?.monthlyEmi,
       });
     });
 
@@ -42,11 +43,12 @@ exports.EMISettlement = async (req, res) => {
       Service_Advance_Total: "",
       Final_Settlement: "",
       Settlement_Percent: "",
-      TotalEMI: "",
+      totalEmi: "",
+      monthlyEmi: "",
     };
 
     data.forEach((entry) => {
-      if (entry.totalEMI) output.TotalEMI = entry.totalEMI;
+      if (entry.totalEMI) output.totalEmi = entry.totalEMI;
       if (entry.name) output.name = entry.name;
       if (entry.phone) output.phone = entry.phone;
 
@@ -82,6 +84,9 @@ exports.EMISettlement = async (req, res) => {
 
       if (entry.Settlement_Percent && !output.Settlement_Percent) {
         output.Settlement_Percent = entry.Settlement_Percent;
+      }
+      if (entry.monthlyEmi && !output.monthlyEmi) {
+        output.monthlyEmi = entry.monthlyEmi;
       }
     });
     fs.unlinkSync(req.file.path); // delete temp CSV

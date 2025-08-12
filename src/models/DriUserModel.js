@@ -57,6 +57,14 @@ const userSchema = new mongoose.Schema({
     type: String,
     default: "",
   },
+  totalEmi: {
+    type: String,
+    default: 0,
+  },
+  monthlyEmi: {
+    type: String,
+    default: 0,
+  },
   dateOfJoin: {
     type: Date,
     default: Date.now,
