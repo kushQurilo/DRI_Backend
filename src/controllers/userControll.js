@@ -1,19 +1,21 @@
 const { default: mongoose } = require("mongoose");
 const User = require("../models/userModel");
-const otpGenerator = require('otp-generator');
+const otpGenerator = require("otp-generator");
 const jwt = require("jsonwebtoken");
-const DriUser = require('../models/DriUserModel');
+const DriUser = require("../models/DriUserModel");
 const userSavingsModel = require("../models/userSavingsModel");
-const otpStore = {}
+const otpStore = {};
 exports.sendOTP = async (req, res) => {
   try {
     const { phone } = req.body;
 
     if (!phone) {
-      return res.status(400).json({ success: false, message: "Phone number is required" });
+      return res
+        .status(400)
+        .json({ success: false, message: "Phone number is required" });
     }
-   const otp = Math.floor(Math.random(5)*10000)
-    console.log("otp",otp)
+    const otp = Math.floor(1000 + Math.random() * 9000);
+    console.log("otp", otp);
     otpStore[phone] = {
       otp,
       expiresAt: Date.now() + 5 * 60 * 1000,
@@ -25,7 +27,9 @@ exports.sendOTP = async (req, res) => {
       otp,
     });
   } catch (err) {
-    return res.status(500).json({ success: false, message: "Server error", error: err.message });
+    return res
+      .status(500)
+      .json({ success: false, message: "Server error", error: err.message });
   }
 };
 
@@ -38,7 +42,7 @@ exports.verifyOTP = async (req, res) => {
     if (!phone || !otp) {
       return res.status(400).json({
         success: false,
-        message: "Phone and OTP are required"
+        message: "Phone and OTP are required",
       });
     }
 
@@ -47,7 +51,7 @@ exports.verifyOTP = async (req, res) => {
     if (!record || record.expiresAt < Date.now()) {
       return res.status(400).json({
         success: false,
-        message: "OTP expired or not found"
+        message: "OTP expired or not found",
       });
     }
 
@@ -59,7 +63,7 @@ exports.verifyOTP = async (req, res) => {
       console.log("Stored OTP:", storedOtp, "Received OTP:", submittedOtp);
       return res.status(401).json({
         success: false,
-        message: "Invalid OTP"
+        message: "Invalid OTP",
       });
     }
 
@@ -70,7 +74,7 @@ exports.verifyOTP = async (req, res) => {
       if (!user) {
         return res.status(404).json({
           success: false,
-          message: "Failed to verify user."
+          message: "Failed to verify user.",
         });
       }
     }
@@ -88,14 +92,13 @@ exports.verifyOTP = async (req, res) => {
     return res.status(200).json({
       success: true,
       message: "Login successful",
-      token
+      token,
     });
-
   } catch (err) {
     console.error("verifyOTP error:", err);
     return res.status(500).json({
       success: false,
-      message: err.message
+      message: err.message,
     });
   }
 };
@@ -103,21 +106,22 @@ exports.userController = async (req, res, next) => {
   try {
     const { user_id } = req;
     if (!user_id) {
-      return res.status(404)
+      return res
+        .status(404)
         .json({ success: false, message: "user id missing" });
     }
-    const userData = await User.findOne({_id: user_id });
-    console.log(userData)
+    const userData = await User.findOne({ _id: user_id });
+    console.log(userData);
     if (!userData) {
-      return res.status(404)
-        .json({ success: false, message: "User Not Found" })
+      return res
+        .status(404)
+        .json({ success: false, message: "User Not Found" });
     }
-    return res.status(200)
-      .json({ success: true, userData })
+    return res.status(200).json({ success: true, userData });
   } catch (err) {
-    console.log(err.message)
+    console.log(err.message);
   }
-}
+};
 
 //  create user
 
@@ -125,77 +129,74 @@ exports.createUser = async (req, res, next) => {
   try {
     const { name, email, phone } = req.body;
     if (!req.body) {
-      return res.status(400)
+      return res
+        .status(400)
         .json({ success: false, message: "invalid request" });
     }
     if (!name || !email || !phone) {
-      return res.status(404)
+      return res
+        .status(404)
         .json({ success: false, message: "Invalid Credentials" });
     }
     const existingUser = await User.findOne({ phone: phone });
     if (existingUser) {
-      return res.status(404)
+      return res
+        .status(404)
         .json({ success: false, message: "User already exists" });
     }
     const user = await User.create({ name, email, phone });
     if (!user) {
-      return res.status(404)
+      return res
+        .status(404)
         .json({ success: false, message: "User Not Created" });
-
     }
-    return res.status(201)
+    return res
+      .status(201)
       .json({ success: true, message: "User Created Successfully" });
   } catch (error) {
-    return res.status(500)
-      .json({
-        success: false,
-        message: error.message
-      })
+    return res.status(500).json({
+      success: false,
+      message: error.message,
+    });
   }
-}
+};
 exports.updateUser = async (req, res, next) => {
   try {
-    
     const { name, email, phone } = req.body;
     const { id } = req.query;
     if (name !== undefined) updateFields.name = name;
     if (email !== undefined) updateFields.email = email;
     if (phone !== undefined) updateFields.phone = phone;
     if (!mongoose.Types.ObjectId.isValid(id)) {
-      return res.status(400)
-        .json({ success: false, message: "invalid user" });
+      return res.status(400).json({ success: false, message: "invalid user" });
     }
     const updateFields = {
-      name,email,phone
+      name,
+      email,
+      phone,
     };
-    const user = await User.updateOne(
-      { _id: id },
-      updateFields,
-      { new: true }
-    );
-    if (!user) { return res.status(404).json({ success: false, message: "faild to update" }) }
+    const user = await User.updateOne({ _id: id }, updateFields, { new: true });
+    if (!user) {
+      return res
+        .status(404)
+        .json({ success: false, message: "faild to update" });
+    }
 
-    return res.status(200)
-      .json({ success: true, message: "update success" });
+    return res.status(200).json({ success: true, message: "update success" });
   } catch (err) {
-    return res.status(500)
-      .json({ success: false, message: err.message });
+    return res.status(500).json({ success: false, message: err.message });
   }
-}
+};
 // user login ny phone and otp
 
-
-
 //
-exports.InsertUser = async (req , res , next) => {
-  try{
+exports.InsertUser = async (req, res, next) => {
+  try {
     // const {name, email,gender,}
-  }catch(err){
-    return res.status(500)
-    .json({ success: false, message: err.message });
+  } catch (err) {
+    return res.status(500).json({ success: false, message: err.message });
   }
-}
-
+};
 
 // insert saving by user
 exports.userSaving = async (req, res, next) => {
@@ -206,7 +207,7 @@ exports.userSaving = async (req, res, next) => {
     if (!user_id) {
       return res.status(400).json({
         success: false,
-        message: "unauthorized user"
+        message: "unauthorized user",
       });
     }
 
@@ -225,7 +226,7 @@ exports.userSaving = async (req, res, next) => {
     if (missingFields.length > 0) {
       return res.status(400).json({
         success: false,
-        errors: missingFields
+        errors: missingFields,
       });
     }
 
@@ -233,27 +234,30 @@ exports.userSaving = async (req, res, next) => {
       user_id,
       month,
       year,
-      amount
+      amount,
     });
 
     return res.json(saving);
   } catch (err) {
     return res.status(500).json({
       success: false,
-      message: err.message
+      message: err.message,
     });
   }
 };
 
-
-// get savings by user 
+// get savings by user
 exports.getSavingByMonthYear = async (req, res) => {
   try {
-    const user_id = req.user_id || req.params.user_id || req.body.user_id || req.query.user_id;
+    const user_id =
+      req.user_id ||
+      req.params.user_id ||
+      req.body.user_id ||
+      req.query.user_id;
     if (!user_id) {
       return res.status(404).json({
         success: false,
-        message: "invalid user"
+        message: "invalid user",
       });
     }
 
@@ -271,14 +275,14 @@ exports.getSavingByMonthYear = async (req, res) => {
       return res.status(400).json({
         success: false,
         message: `${missingFields.join(", ")} required`,
-        errors: missingFields
+        errors: missingFields,
       });
     }
 
     const payload = {
       user_id,
       month: month.trim(),
-      year: parseInt(year)
+      year: parseInt(year),
     };
 
     const savings = await userSavingsModel.find(payload);
@@ -286,22 +290,20 @@ exports.getSavingByMonthYear = async (req, res) => {
     if (savings.length === 0) {
       return res.status(404).json({
         success: false,
-        message: "No savings found for this month and year"
+        message: "No savings found for this month and year",
       });
     }
 
     return res.status(200).json({
       success: true,
-      data: savings
+      data: savings,
     });
-
   } catch (err) {
     console.error("Error fetching savings:", err);
     res.status(500).json({
       success: false,
       message: "Server error",
-      error: err.message
+      error: err.message,
     });
   }
 };
- 
