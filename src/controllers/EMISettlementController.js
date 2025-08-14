@@ -178,3 +178,5 @@ exports.getAllEmiByUser = async (req, res, next) => {
 //       const {service,total}
 //     }catch(error){ return res.status(500).json({success:false,message:error.message,error})}
 // }
+
+//hello world
