@@ -1,43 +1,57 @@
 const EmiModel = require("../models/EMIModel");
 const DrisModel = require("../models/DriUserModel");
 const fs = require("fs");
-const excelModel = require("../models/excelModel");
 const csv = require("csvtojson");
+
 exports.EMISettlement = async (req, res) => {
   try {
-    const data = [];
-    const result = await csv().fromFile(req.file.path);
+    const { phone: requestPhone } = req.body;
 
-    result.forEach((element) => {
-      data.push({
-        name: element?.Person || element?.person || "",
-        phone: element?.Phone || element?.phone || "",
-        credit_Cards: element?.CreditCard || element?.creditcard || "",
-        credit_Amount: element?.CreditAmount || element?.creditamount || "",
-        credit_Total: element?.CCTotal || element?.cctotal || "",
-        personal_Loan: element?.PersonalLoan || element?.personalloan || "",
-        PL_Amount: element?.TotalAmount || element?.totalamount || "",
-        PL_Total: element?.PLTotal || element?.pltotal || "",
-        Service_Fees: element?.ServiceTotal || element?.servicetotal || "",
-        Service_Advance_Total:
-          element?.AdvanceTotal || element?.advancetotal || "",
-        Final_Settlement:
-          element?.FinalSettlement || element?.finalsettlement || "",
-        Settlement_Percent:
-          element?.SettlementPercent || element?.settlementpercent || "",
-        totalEMI: element?.TotalEMI || element?.totalemi || "",
-        monthlyEmi: element?.MonthlyEmi || element?.monthlyEmi,
+    if (!requestPhone) {
+      return res.status(400).json({
+        success: false,
+        message: "Phone number is required",
       });
+    }
+
+    const rawRows = await csv().fromFile(req.file.path);
+
+    let lastPhone = "";
+    let lastName = "";
+
+    // Fill missing Person & Phone values
+    const normalizedData = rawRows.map((row) => {
+      if (row.Phone && row.Phone.trim()) lastPhone = row.Phone.trim();
+      if (row.Person && row.Person.trim()) lastName = row.Person.trim();
+
+      return {
+        ...row,
+        Phone: row.Phone && row.Phone.trim() ? row.Phone.trim() : lastPhone,
+        Person: row.Person && row.Person.trim() ? row.Person.trim() : lastName,
+      };
     });
 
+    // Filter only this phone number
+    const filteredRows = normalizedData.filter((row) => {
+      return String(row.Phone).trim() === String(requestPhone).trim();
+    });
+
+    if (filteredRows.length === 0) {
+      fs.unlinkSync(req.file.path);
+      return res.status(404).json({
+        success: false,
+        message: "No matching user found in CSV",
+      });
+    }
+
+    // Build grouped output
     const output = {
-      name: "",
-      phone: "",
+      phone: requestPhone,
       credit_Cards: [],
       credit_Amount: [],
       personal_Loan: [],
-      CreditTotal: "",
       PL_Amount: [],
+      CreditTotal: "",
       PL_Total: "",
       Service_Fees: "",
       Service_Advance_Total: "",
@@ -47,63 +61,45 @@ exports.EMISettlement = async (req, res) => {
       monthlyEmi: "",
     };
 
-    data.forEach((entry) => {
-      if (entry.totalEMI) output.totalEmi = entry.totalEMI;
-      if (entry.name) output.name = entry.name;
-      if (entry.phone) output.phone = entry.phone;
-
-      if (entry.credit_Cards) {
-        output.credit_Cards.push(entry.credit_Cards);
-        output.credit_Amount.push(entry.credit_Amount || "");
+    filteredRows.forEach((entry) => {
+      // Credit card details
+      if (entry.CreditCard) {
+        output.credit_Cards.push(entry.CreditCard);
+        output.credit_Amount.push(entry.CreditAmc || entry.CreditAmount || "");
       }
 
-      if (entry.credit_Total) {
-        output.CreditTotal = entry.credit_Total;
+      if (entry.CCTotal) output.CreditTotal = entry.CCTotal;
+
+      // Loan details
+      if (entry.PersonalLoan) {
+        output.personal_Loan.push(entry.PersonalLoan);
+        output.PL_Amount.push(entry.TotalAmount || "");
       }
 
-      if (entry.personal_Loan) {
-        output.personal_Loan.push(entry.personal_Loan);
-        output.PL_Amount.push(entry.PL_Amount || "");
-      }
-
-      if (entry.PL_Total && !output.PL_Total) {
-        output.PL_Total = entry.PL_Total;
-      }
-
-      if (entry.Service_Fees && !output.Service_Fees) {
-        output.Service_Fees = entry.Service_Fees;
-      }
-
-      if (entry.Service_Advance_Total && !output.Service_Advance_Total) {
-        output.Service_Advance_Total = entry.Service_Advance_Total;
-      }
-
-      if (entry.Final_Settlement && !output.Final_Settlement) {
-        output.Final_Settlement = entry.Final_Settlement;
-      }
-
-      if (entry.Settlement_Percent && !output.Settlement_Percent) {
-        output.Settlement_Percent = entry.Settlement_Percent;
-      }
-      if (entry.monthlyEmi && !output.monthlyEmi) {
-        output.monthlyEmi = entry.monthlyEmi;
-      }
+      if (entry.PLTotal) output.PL_Total = entry.PLTotal;
+      if (entry.ServiceTotal) output.Service_Fees = entry.ServiceTotal;
+      if (entry.AdvanceTotal) output.Service_Advance_Total = entry.AdvanceTotal;
+      if (entry.FinalSettlement)
+        output.Final_Settlement = entry.FinalSettlement;
+      if (entry.SettlementPercent)
+        output.Settlement_Percent = entry.SettlementPercent;
+      if (entry.TotalEMI) output.totalEmi = entry.TotalEMI;
+      if (entry.MonthlyEmi) output.monthlyEmi = entry.MonthlyEmi;
     });
-    fs.unlinkSync(req.file.path); // delete temp CSV
-    const userPhone = output.phone;
-    delete output.name;
-    delete output.email;
 
-    const isUser = await DrisModel.findOne({ phone: userPhone });
+    fs.unlinkSync(req.file.path); // Delete temp CSV
+
+    console.log("dta", output);
+    const isUser = await DrisModel.findOne({ phone: requestPhone });
 
     if (isUser) {
-      // Option 1: Update and save
       Object.assign(isUser, output);
       await isUser.save();
 
       return res.status(201).json({
         success: true,
         message: "EMI Upload successfully",
+        data: output, // Return grouped data for confirmation
       });
     }
 
@@ -113,9 +109,10 @@ exports.EMISettlement = async (req, res) => {
     });
   } catch (err) {
     console.error("Error processing EMI:", err);
-    return res
-      .status(500)
-      .send({ message: "Server Error", error: err.message });
+    return res.status(500).send({
+      message: "Server Error",
+      error: err.message,
+    });
   }
 };
 

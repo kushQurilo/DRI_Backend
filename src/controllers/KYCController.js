@@ -21,7 +21,12 @@ exports.CompleteKYC = async (req, res, next) => {
     if (!isUser) {
       return res.status(400).json({ message: "Invalid User", success: false });
     }
-
+    if (isUser.email === email) {
+      return res.status(400).json({
+        success: false,
+        message: "Email Already Register",
+      });
+    }
     const isKyc = await KYCmodel.findOne({ user_id });
     if (isKyc) {
       if (isKyc.status === "pending") {
@@ -67,7 +72,6 @@ exports.CompleteKYC = async (req, res, next) => {
       email,
       gender,
     };
-    console.log("kyc doc", payload);
     const uploadKyc = await KYCmodel.create(payload);
     if (!uploadKyc) {
       return res
@@ -145,7 +149,6 @@ exports.ApproveByAdmin = async (req, res) => {
       });
     }
 
-    // ✅ Update KYC Status
     const payload = {
       id: assign_id,
       assign_advocate: advocate_id,
