@@ -6,14 +6,18 @@ const csv = require("csvtojson");
 exports.EMISettlement = async (req, res) => {
   try {
     const { phone: requestPhone } = req.body;
-
+    const csvfilepath = req.file.path;
     if (!requestPhone) {
       return res.status(400).json({
         success: false,
         message: "Phone number is required",
       });
     }
-
+    if (requestPhone.length > 10) {
+      return res
+        .status(400)
+        .json({ success: false, message: "phone number must me 10 digit" });
+    }
     const rawRows = await csv().fromFile(req.file.path);
 
     let lastPhone = "";
@@ -62,7 +66,6 @@ exports.EMISettlement = async (req, res) => {
     };
 
     filteredRows.forEach((entry) => {
-      // Credit card details
       if (entry.CreditCard) {
         output.credit_Cards.push(entry.CreditCard);
         output.credit_Amount.push(entry.CreditAmc || entry.CreditAmount || "");
@@ -87,11 +90,9 @@ exports.EMISettlement = async (req, res) => {
       if (entry.MonthlyEmi) output.monthlyEmi = entry.MonthlyEmi;
     });
 
-    fs.unlinkSync(req.file.path); // Delete temp CSV
-
+    fs.unlinkSync(csvfilepath);
     console.log("dta", output);
     const isUser = await DrisModel.findOne({ phone: requestPhone });
-
     if (isUser) {
       Object.assign(isUser, output);
       await isUser.save();
@@ -99,7 +100,6 @@ exports.EMISettlement = async (req, res) => {
       return res.status(201).json({
         success: true,
         message: "EMI Upload successfully",
-        data: output, // Return grouped data for confirmation
       });
     }
 
@@ -138,7 +138,6 @@ exports.EMIPayment = async (req, res, next) => {
   }
 };
 
-// delete emi's if no emi's
 exports.deleteEmis = async (req, res, next) => {
   try {
     const { user_id, emiId } = req.body;
@@ -172,3 +171,10 @@ exports.getAllEmiByUser = async (req, res, next) => {
     });
   }
 };
+
+// exports.ManulaEmiUpload = async (req , res, next) => {
+//     try{
+//       const {phone} = req.body;
+//       const {service,total}
+//     }catch(error){ return res.status(500).json({success:false,message:error.message,error})}
+// }
