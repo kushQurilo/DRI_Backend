@@ -1,3 +1,4 @@
+const { default: mongoose, mongo } = require("mongoose");
 const adminModel = require("../../models/adminModel");
 const advocateModel = require("../../models/advocateModel");
 const cloudinay = require("../../utilitis/cloudinary");
@@ -10,13 +11,13 @@ exports.addAdvocate = async (req, res, next) => {
     if (!name || !whatsappNumber || !contactNumber || !imagePath)
       return res
         .status(400)
-        .json({ success: false, message: "Please fill all fields" });
+        .json({ success: false, message: "Advocate Credentials Missing" });
     const payload = { name, whatsappNumber, contactNumber };
-    const advocate = await advocateModel.findOne({ contactNumber });
+    const advocate = await advocateModel.findOne({ whatsappNumber });
     if (advocate) {
       return res.status(400).json({
         success: false,
-        message: "Advocate already exists",
+        message: "Whatsapp Number Already In Used.",
       });
     }
     const profileImage = await cloudinay.uploader.upload(imagePath, {
@@ -24,10 +25,13 @@ exports.addAdvocate = async (req, res, next) => {
     });
     fs.unlinkSync(imagePath);
     payload.advocateImage = profileImage.secure_url;
-    payload.imagePublicKey = profileImage.public_id;
+    payload.imagePublicKey = profileImage.public_id; // public key for delete imaget to cloudinary
     const createAdvocate = await advocateModel.create(payload);
-    if (!createAdvocate)
-      return res.status(400).json({ success: false, message: "failed to add" });
+    if (!createAdvocate) {
+      return res
+        .status(400)
+        .json({ success: false, message: "failed to add Advocate" });
+    }
     return res
       .status(200)
       .json({ success: true, message: "added successfully" });
@@ -42,14 +46,26 @@ exports.updateAdvocate = async (req, res, next) => {
   try {
     const { admin_id } = req;
     const imagePath = req.file;
-    const { name, whatsapp, contact } = req.body;
-    if (!admin_id) return res.status(401).json({ message: "Unauthorized" });
+    const { name, whatsapp, contact, id } = req.body;
+    if (!admin_id) return res.status(401).json({ message: "Admin id missing" });
+    if (!mongoose.Types.ObjectId.isValid(admin_id))
+      return res
+        .status(200)
+        .json({ success: false, message: "Admin Id should be ObjectId" });
+    if (!id)
+      return res
+        .status(200)
+        .json({ success: false, message: "Advocate Id require" });
+    if (!mongoose.Types.ObjectId.isValid(id))
+      return res
+        .status(200)
+        .json({ success: false, message: "advocate id must be ObjectId" });
     if (!name || !whatsapp || !contact)
       return res
         .status(400)
-        .json({ success: false, message: "Please fill all fields" });
+        .json({ success: false, message: "Advocate credentials missing" });
     const payload = { name, whatsappNumber: whatsapp, contactNumber: contact };
-    const isAdvocate = await advocateModel.findOne({ contactNumber: contact });
+    const isAdvocate = await advocateModel.findById(id);
     if (!isAdvocate)
       return res
         .status(400)
@@ -59,7 +75,7 @@ exports.updateAdvocate = async (req, res, next) => {
       const existImage = await cloudinay.uploader.destroy(
         isAdvocate.imagePublicKey
       );
-      if ((existImage.result = "ok")) {
+      if (existImage.result == "ok") {
         const profileImage = await cloudinay.uploader.upload(imagePath.path, {
           folder: "Advacte Images",
           public: isAdvocate.imagePublicKey,
@@ -86,9 +102,12 @@ exports.updateAdvocate = async (req, res, next) => {
 // single advocate profile get
 exports.getSingleAdvocate = async (req, res, next) => {
   try {
-    const { admin_id } = req;
     const { id } = req.params;
-    if (!admin_id) return res.status(401).json({ message: "Unauthorized" });
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res
+        .status(200)
+        .json({ success: false, message: "Advocate id must be ObjectId" });
+    }
     const advocate = await advocateModel.findById(id);
     if (!advocate)
       return res

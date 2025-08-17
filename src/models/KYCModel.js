@@ -36,6 +36,10 @@ const kycSchema = new mongoose.Schema({
     type: String,
     default: "pending",
   },
+  phone: {
+    type: String,
+    required: [true, "phone number required"],
+  },
   date: {
     type: String,
     default: () => {

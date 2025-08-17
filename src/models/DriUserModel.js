@@ -17,6 +17,7 @@ const userSchema = new mongoose.Schema({
   },
   phone: {
     type: String,
+    ref: "kyc",
   },
   credit_Cards: {
     type: [String],
@@ -64,6 +65,14 @@ const userSchema = new mongoose.Schema({
   monthlyEmi: {
     type: String,
     default: 0,
+  },
+  emiPay: {
+    type: String,
+    default: 0,
+  },
+  status: {
+    type: "String",
+    default: "Pending",
   },
   dateOfJoin: {
     type: Date,

@@ -4,30 +4,40 @@ const personalLoanModel = require("../models/personalLoan");
 exports.createPersonalLoan = async (req, res) => {
   try {
     const {
-      userId,
-      bankName,
-      principle,
-      estimatedSettlement,
-      estimatedSaves,
       loanType,
-    } = req.body;
-    if (!userId || !mongoose.Types.ObjectId.isValid(userId)) {
-      return res
-        .status(400)
-        .json({ success: false, message: "Invalid userId" });
-    }
-
-    const loan = await personalLoanModel.create({
-      userId,
-      bankName,
-      principle,
+      principleAmount,
       estimatedSettlement,
-      estimatedSaves,
+      saving,
+      bankName,
+      phone,
+    } = req.body;
+    const payload = {
+      loanType,
+      principleAmount,
+      estimatedSettlement,
+      saving,
+      bankName,
+      phone: Number(phone),
+    };
+    console.log(req.body);
+    const loan = await personalLoanModel.create({
+      phone,
+      bankName,
+      principleAmount,
+      estimatedSettlement,
+      saving,
       loanType,
     });
-    return res.status(201).json({ success: true, data: loan });
+    if (!loan) {
+      return res
+        .status(400)
+        .json({ success: false, message: "Faild to add loan" });
+    }
+    return res.status(201).json({ success: true, message: "Loan added" });
   } catch (err) {
-    return res.status(500).json({ success: false, message: err.message });
+    return res
+      .status(500)
+      .json({ success: false, message: err.message, error: err });
   }
 };
 

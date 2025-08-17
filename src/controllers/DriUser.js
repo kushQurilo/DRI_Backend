@@ -15,13 +15,11 @@ exports.importUsersFromCSV = async (req, res) => {
       phone: row.phone,
     }));
     const uplodUserData = await DrisModel.insertMany(data, { ordered: true });
-    return res
-      .status(200)
-      .json({
-        success: true,
-        message: "Users inserted",
-        count: uplodUserData.length,
-      });
+    return res.status(200).json({
+      success: true,
+      message: "Users inserted",
+      count: uplodUserData.length,
+    });
   } catch (err) {
     console.error("Insertion error:", err);
     return res.status(500).json({
@@ -34,10 +32,19 @@ exports.importUsersFromCSV = async (req, res) => {
 //get all user list for admin
 exports.getUsersList = async (req, res) => {
   try {
+    // Fetch all users
     const users = await DrisModel.find({})
       .select("-createdAt -__v") // remove unwanted fields
       .lean();
 
+    if (!users || users.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: "No User Found",
+      });
+    }
+
+    // For each user, fetch KYC + EMI by phone
     const results = await Promise.all(
       users.map(async (user) => {
         // Fetch KYC by phone number
@@ -45,15 +52,9 @@ exports.getUsersList = async (req, res) => {
           .select("-__v")
           .lean();
 
-        // Fetch EMI by phone number
-        const emiData = await EmiModel.find({ phone: user.phone })
-          .select("-__v")
-          .lean();
-
         return {
           ...user,
           kyc: kycData || null,
-          emi: emiData || [],
         };
       })
     );
@@ -101,6 +102,50 @@ exports.searchUserById = async (req, res) => {
     return res.status(500).json({
       success: false,
       message: error.message,
+    });
+  }
+};
+
+//  get single user
+exports.getSingleUser = async (req, res) => {
+  try {
+    const { phone } = req.body;
+
+    // Find single user by phone
+    const user = await DrisModel.findOne({ phone })
+      .select("-createdAt -__v") // remove unwanted fields
+      .lean();
+
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: "No User Found",
+      });
+    }
+
+    // Fetch KYC by phone number
+    const kycData = await KYCmodel.findOne({ phone: user.phone })
+      .select("-__v")
+      .lean();
+
+    // You can also fetch EMI if needed
+    const emiData = await EmiModel.find({ phone: user.phone })
+      .select("-__v")
+      .lean();
+
+    const result = {
+      ...user,
+      kyc: kycData || null,
+      emi: emiData || [],
+    };
+
+    return res.status(200).json({ success: true, data: result });
+  } catch (err) {
+    console.error("Error fetching user:", err);
+    return res.status(500).json({
+      success: false,
+      message: err.message,
+      reason: err?.writeErrors?.[0]?.errmsg || "Unknown error",
     });
   }
 };

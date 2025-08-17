@@ -44,7 +44,7 @@ exports.EMISettlement = async (req, res) => {
       fs.unlinkSync(req.file.path);
       return res.status(404).json({
         success: false,
-        message: "No matching user found in CSV",
+        message: "User Not Found In This Nunber..",
       });
     }
 
@@ -172,11 +172,49 @@ exports.getAllEmiByUser = async (req, res, next) => {
   }
 };
 
-// exports.ManulaEmiUpload = async (req , res, next) => {
-//     try{
-//       const {phone} = req.body;
-//       const {service,total}
-//     }catch(error){ return res.status(500).json({success:false,message:error.message,error})}
-// }
+exports.ManualEmiUpload = async (req, res, next) => {
+  try {
+    const {
+      phone,
+      servicename,
+      PL_Total,
+      Service_Fees,
+      Service_Advance_Total,
+      Settlement_Percent,
+      Final_Settlement,
+      totalEmi,
+      monthlyEmi,
+      dateOfJoin,
+    } = req.body;
 
-//hello world
+    if (!phone || phone.length > 9 || phone == "") {
+      return res.status(200).json({
+        success: false,
+        message: "Phone number require and phone must be 10 digit",
+      });
+    }
+    const payload = {
+      phone,
+      servicename,
+      PL_Total,
+      Service_Fees,
+      Service_Advance_Total,
+      Settlement_Percent,
+      Final_Settlement,
+      totalEmi,
+      monthlyEmi,
+      dateOfJoin,
+    };
+    const isUser = await DrisModel.findById({ phone });
+    if (!isUser) {
+      return res
+        .status(400)
+        .json({ success: false, message: "user not found at this number" });
+    }
+    isUser.insertOne();
+  } catch (error) {
+    return res
+      .status(500)
+      .json({ success: false, message: error.message, error });
+  }
+};

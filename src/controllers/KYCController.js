@@ -9,7 +9,7 @@ exports.CompleteKYC = async (req, res, next) => {
   try {
     const results = [];
     const { user_id } = req;
-    const { name, lastname, email, gender } = req.body;
+    const { name, lastname, email, gender, phone } = req.body;
     // const
     if (!name || !user_id) {
       return res
@@ -71,6 +71,7 @@ exports.CompleteKYC = async (req, res, next) => {
       lastname,
       email,
       gender,
+      phone,
     };
     const uploadKyc = await KYCmodel.create(payload);
     if (!uploadKyc) {
