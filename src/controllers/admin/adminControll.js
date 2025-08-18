@@ -64,12 +64,10 @@ exports.loginAdmin = async (req, res, next) => {
     // --------- Check if account is locked -------------
     if (isExist.lockUntil && isExist.lockUntil > Date.now()) {
       const unlockTime = new Date(isExist.lockUntil).toLocaleTimeString();
-      return res
-        .status(403)
-        .json({
-          success: false,
-          message: `Account locked until ${unlockTime}`,
-        });
+      return res.status(403).json({
+        success: false,
+        message: `Account locked until ${unlockTime}`,
+      });
     }
     // ------ check password match --------
     const isMatch = await compareHashPassword(password, isExist.password);
@@ -79,13 +77,11 @@ exports.loginAdmin = async (req, res, next) => {
       if (isExist.failedAttempts >= 3) {
         isExist.lockUntil = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
         await isExist.save();
-        return res
-          .status(403)
-          .json({
-            success: false,
-            message:
-              "Account locked due to 3 failed attempts. Try again in 10 minutes.",
-          });
+        return res.status(403).json({
+          success: false,
+          message:
+            "Account locked due to 3 failed attempts. Try again in 10 minutes.",
+        });
       }
       await isExist.save();
       return res
@@ -561,6 +557,18 @@ exports.getAdminProfileAndBanner = async (req, res, next) => {
         adminBanner: adminBanner[0].adminBanner,
       },
     });
+  } catch (error) {
+    return res.status(500).json({
+      success: false,
+      message: error.message,
+      error,
+    });
+  }
+};
+
+exports.getUserLoginBanner = async (req, res) => {
+  try {
+    const banners = await adminAndLoginBannerModel.find({}).select();
   } catch (error) {
     return res.status(500).json({
       success: false,

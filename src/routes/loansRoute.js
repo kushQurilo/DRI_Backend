@@ -1,7 +1,10 @@
-const { getPersonalLoan, createPersonalLoan } = require('../controllers/loansControll');
+const {
+  createPersonalLoan,
+  getAllLoans,
+} = require("../controllers/loansControll");
 
-const loanRouter = require('express').Router();
-loanRouter.post("/create",createPersonalLoan);
-loanRouter.get('/',getPersonalLoan);
+const loanRouter = require("express").Router();
+loanRouter.post("/create", createPersonalLoan);
+loanRouter.get("/", getAllLoans);
 
 module.exports = loanRouter;

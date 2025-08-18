@@ -4,6 +4,7 @@ const personalLoanModel = require("../models/personalLoan");
 exports.createPersonalLoan = async (req, res) => {
   try {
     const {
+      user_id,
       loanType,
       principleAmount,
       estimatedSettlement,
@@ -12,22 +13,16 @@ exports.createPersonalLoan = async (req, res) => {
       phone,
     } = req.body;
     const payload = {
-      loanType,
-      principleAmount,
-      estimatedSettlement,
-      saving,
-      bankName,
-      phone: Number(phone),
-    };
-    console.log(req.body);
-    const loan = await personalLoanModel.create({
+      user_id,
       phone,
       bankName,
       principleAmount,
       estimatedSettlement,
       saving,
       loanType,
-    });
+    };
+    console.log(req.body);
+    const loan = await personalLoanModel.create(payload);
     if (!loan) {
       return res
         .status(400)
@@ -42,18 +37,19 @@ exports.createPersonalLoan = async (req, res) => {
 };
 
 // Get all loans for a user.
-exports.getPersonalLoan = async (req, res) => {
+exports.getAllLoans = async (req, res) => {
   try {
-    const { id } = req.query;
+    const { user_id } = req;
 
-    if (!id || !mongoose.Types.ObjectId.isValid(id)) {
+    console.log("user", req);
+    if (!user_id || !mongoose.Types.ObjectId.isValid(id)) {
       return res
         .status(400)
         .json({ success: false, message: "Invalid user ID" });
     }
 
     const personalloan = await personalLoanModel
-      .find({ userId: id })
+      .find({ user_id: user_id })
       .select("-userId -_id");
     if (personalloan.length === 0) {
       return res

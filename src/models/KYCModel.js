@@ -40,6 +40,10 @@ const kycSchema = new mongoose.Schema({
     type: String,
     required: [true, "phone number required"],
   },
+  alernatePhone: {
+    type: String,
+    default: "0",
+  },
   date: {
     type: String,
     default: () => {

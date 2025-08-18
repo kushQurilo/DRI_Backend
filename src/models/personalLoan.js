@@ -1,5 +1,9 @@
 const mongoose = require("mongoose");
 const personalLoanSchema = mongoose.Schema({
+  user_id: {
+    type: mongoose.Schema.Types.ObjectId,
+    required: true,
+  },
   phone: {
     type: Number,
     required: [true, "phone number required"],

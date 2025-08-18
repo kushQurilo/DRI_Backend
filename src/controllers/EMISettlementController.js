@@ -174,44 +174,27 @@ exports.getAllEmiByUser = async (req, res, next) => {
 
 exports.ManualEmiUpload = async (req, res, next) => {
   try {
-    const {
-      phone,
-      servicename,
-      PL_Total,
-      Service_Fees,
-      Service_Advance_Total,
-      Settlement_Percent,
-      Final_Settlement,
-      totalEmi,
-      monthlyEmi,
-      dateOfJoin,
-    } = req.body;
+    const { phone, totalEmi, monthlyEmi } = req.body;
 
-    if (!phone || phone.length > 9 || phone == "") {
+    if (!phone || phone.length !== 10) {
       return res.status(200).json({
         success: false,
-        message: "Phone number require and phone must be 10 digit",
+        message: "Phone number is required and must be exactly 10 digits",
       });
     }
-    const payload = {
-      phone,
-      servicename,
-      PL_Total,
-      Service_Fees,
-      Service_Advance_Total,
-      Settlement_Percent,
-      Final_Settlement,
-      totalEmi,
-      monthlyEmi,
-      dateOfJoin,
-    };
     const isUser = await DrisModel.findById({ phone });
     if (!isUser) {
       return res
         .status(400)
         .json({ success: false, message: "user not found at this number" });
     }
-    isUser.insertOne();
+    isUser.totalEmi = totalEmi;
+    isUser.totalEmi = monthlyEmi;
+    await isUser.save();
+    return res.status(201).json({
+      success: true,
+      message: "emi uploded",
+    });
   } catch (error) {
     return res
       .status(500)
