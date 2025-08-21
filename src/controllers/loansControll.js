@@ -39,17 +39,8 @@ exports.createPersonalLoan = async (req, res) => {
 // Get all loans for a user.
 exports.getAllLoans = async (req, res) => {
   try {
-    const { user_id } = req;
-
-    console.log("user", req);
-    if (!user_id || !mongoose.Types.ObjectId.isValid(id)) {
-      return res
-        .status(400)
-        .json({ success: false, message: "Invalid user ID" });
-    }
-
     const personalloan = await personalLoanModel
-      .find({ user_id: user_id })
+      .find({})
       .select("-userId -_id");
     if (personalloan.length === 0) {
       return res
@@ -125,3 +116,11 @@ exports.deleteLoan = async (req, res) => {
     return res.status(500).json({ success: false, message: err.message });
   }
 };
+
+// get for single user
+
+// exports.getAllLoanUser = async(req , res)=>{
+//   try{
+
+//   }
+// }

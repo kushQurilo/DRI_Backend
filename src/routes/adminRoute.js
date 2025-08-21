@@ -11,6 +11,7 @@ const {
   getAdminAnsLoginBanner,
   getAdminProfileAndBanner,
 } = require("../controllers/admin/adminControll");
+const { addBanks, getBanks } = require("../controllers/admin/bankController");
 const { AuthMiddleWare } = require("../middlewares/adminMiddleware");
 const upload = require("../middlewares/bannerMiddleware");
 const limiter = require("../middlewares/rateLimitMiddleware");
@@ -60,4 +61,6 @@ adminRouter.post(
 adminRouter.get("/getadminBanner", getAdminAnsLoginBanner);
 adminRouter.get("/adminProfileBanner", getAdminProfileAndBanner);
 // adminRouter.get("/login-background", getlo);
+adminRouter.post("/add-banks", UploadSingleImage.single("image"), addBanks);
+adminRouter.get("/get-banks", getBanks);
 module.exports = adminRouter;

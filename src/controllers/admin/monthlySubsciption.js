@@ -102,8 +102,8 @@ exports.getUsersSubscriptionToAdmin = async (req, res, next) => {
 // get  perticular user subscriptions for user...
 exports.getUsersSubscriptionToUser = async (req, res, next) => {
   try {
-    const { role, user_id } = req;
-    if (!role || !user_id) {
+    const { user_id } = req;
+    if (!user_id) {
       return res.status(400).json({ message: "user credential missing" });
     }
     const isUser = await User.findById(user_id);

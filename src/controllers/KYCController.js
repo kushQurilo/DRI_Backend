@@ -27,7 +27,7 @@ exports.CompleteKYC = async (req, res, next) => {
         message: "Email Already Register",
       });
     }
-    const isKyc = await KYCmodel.findOne({ user_id });
+    const isKyc = await KYCmodel.findOne({ $or: [{ user_id }, { phone }] });
     if (isKyc) {
       if (isKyc.status === "pending") {
         return res.status(400).json({
@@ -208,15 +208,14 @@ exports.getAllKycDetails = async (req, res) => {
 //  get single kyc details
 exports.getSingleKycDetails = async (req, res, next) => {
   try {
-    const { admin_id } = req;
-    const { user_id, kycId } = req.query;
-    if (!admin_id || !user_id || !kycId) {
+    const { user_id } = req.query;
+    if (!user_id) {
       return res.status(404).json({
         success: false,
         message: "Invalid Credentials",
       });
     }
-    const fetchSingleKyc = await KYCmodel.findOne({ user_id, kycId });
+    const fetchSingleKyc = await KYCmodel.findOne({ user_id });
     if (!fetchSingleKyc) {
       return res.status(404).json({
         success: false,

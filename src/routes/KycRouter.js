@@ -25,10 +25,5 @@ KycRouters.post(
   ApproveByAdmin
 );
 KycRouters.get("/get-kyc", getAllKycDetails);
-KycRouters.get(
-  "/single-kyc",
-  AuthMiddleWare,
-  roleAuthenticaton("admin"),
-  getSingleKycDetails
-);
+KycRouters.get("/single-kyc", getSingleKycDetails);
 module.exports = KycRouters;
