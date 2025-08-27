@@ -7,6 +7,7 @@ const cloudinary = require("../../utilitis/cloudinary");
 const superbase = require("../../config/superbase storage/superbaseConfig");
 const InvoiceModel = require("../../models/InvoiceModel");
 const { default: mongoose } = require("mongoose");
+const DrisModel = require("../../models/DriUserModel");
 
 exports.viewInvoice = async (req, res, next) => {
   try {
@@ -26,13 +27,12 @@ exports.uploadInvoice = async (req, res, next) => {
     if (!file) {
       return res.status(400).json({ message: "No file uploaded" });
     }
-
     if (!phone) {
       return res
         .status(400)
         .json({ success: false, message: "phone number required" });
     }
-    // Upload PDF to Supabase
+
     const filePath = file.path;
     const fileName = `pdfs/${Date.now()}_${file.originalname}`;
     const fileBuffer = fs.readFileSync(filePath);
@@ -44,9 +44,7 @@ exports.uploadInvoice = async (req, res, next) => {
         upsert: false,
       });
 
-    if (error) {
-      throw new Error("Failed to upload PDF to Supabase: " + error.message);
-    }
+    if (error) throw new Error("Failed to upload PDF: " + error.message);
 
     const { data: publicUrlData } = superbase.storage
       .from("invoices")
@@ -54,6 +52,7 @@ exports.uploadInvoice = async (req, res, next) => {
 
     const publicUrl = publicUrlData.publicUrl;
 
+    // Parse PDF
     const buffer = fs.readFileSync(filePath);
     const pdfData = await pdfParse(buffer);
     const text = pdfData.text;
@@ -63,31 +62,50 @@ exports.uploadInvoice = async (req, res, next) => {
       return match ? match[1].trim() : "";
     };
 
+    // 🔹 Dynamic Service Extraction
+    let serviceName = "";
+    const serviceBlockMatch = text.match(
+      /SERVICES\s*([\s\S]*?)(?:UPI|Bank Details|SAC|Rate)/i
+    );
+
+    if (serviceBlockMatch) {
+      serviceName = serviceBlockMatch[1]
+        .split("\n")
+        .map((l) => l.trim())
+        .filter(Boolean)
+        .join(" ");
+    }
+
     const invoiceData = {
       invoiceDate: extract(/Invoice Date\s+([\d\/]+)/i),
-      serviceName: extract(/Monthly Subscription Fees\s*\n*\(([^)]+)\)/i)
-        ? `Monthly Subscription Fees (${extract(
-            /Monthly Subscription Fees\s*\n*\(([^)]+)\)/i
-          )})`
-        : "Monthly Subscription Fees",
+      serviceName: serviceName || "Unknown Service",
       totalAmount: extract(/Total Amount\s+₹?\s*([\d,]+)/i),
       url: publicUrl,
       phone,
     };
+
     fs.unlinkSync(filePath);
+
     const result = await InvoiceModel.create(invoiceData);
     if (!result) {
       return res.status(500).json({ message: "Failed to upload invoice" });
     }
+    await DrisModel.findOneAndUpdate(
+      { phone },
+      {
+        $inc: { emiPay: 1 },
+        $set: { status: "Pending" },
+      },
+      { new: true, upsert: true }
+    );
     return res.status(200).json({
-      message: "PDF uploaded",
+      message: "Invoice uploaded",
       success: true,
     });
   } catch (err) {
-    console.error("Error processing invoice:", err);
     return res.status(500).json({
       success: false,
-      message: "Internal Server Error",
+      message: err?.message,
       error: err.message,
     });
   }
@@ -96,11 +114,11 @@ exports.uploadInvoice = async (req, res, next) => {
 // get all invoices for user
 exports.getInvoices = async (req, res, next) => {
   try {
-    const { user_id } = req.params;
-    if (!user_id) {
+    const { phone } = req.body;
+    if (!phone) {
       return res.status(400).json({ message: "User required" });
     }
-    const result = await InvoiceModel.find({ user_id });
+    const result = await InvoiceModel.find({ phone }).select("-_id -phone");
     if (!result) {
       return res.status(404).json({ message: "No invoices found" });
     }
@@ -116,19 +134,19 @@ exports.getInvoices = async (req, res, next) => {
 // get invoice by date
 exports.getInvoicesByMonthYear = async (req, res) => {
   try {
-    const { month, year, id } = req.query;
+    const { month, year, phone } = req.body;
     if (!month || !year) {
       return res.status(400).json({ message: "Month and year required" });
     }
-    const isId = mongoose.Types.ObjectId.isValid(id);
-    if (!isId) {
-      return res.status(400).json({ success: false, message: "Invalid id" });
+    if (!phone) {
+      return res.status(400).json({ message: "phone number missing" });
     }
+
     const formattedMonth = month.padStart(2, "0");
     const regex = new RegExp(`/${formattedMonth}/${year}$`);
 
     const invoices = await InvoiceModel.find({
-      user_id: id,
+      phone: phone,
       invoiceDate: {
         $regex: regex,
       },

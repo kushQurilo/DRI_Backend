@@ -10,10 +10,16 @@ const {
   addLoginBackground,
   getAdminAnsLoginBanner,
   getAdminProfileAndBanner,
+  requestOtp,
+  verifyOtpForAdmin,
+  changePasswprd,
 } = require("../controllers/admin/adminControll");
 const { addBanks, getBanks } = require("../controllers/admin/bankController");
 const { AuthMiddleWare } = require("../middlewares/adminMiddleware");
 const upload = require("../middlewares/bannerMiddleware");
+const {
+  forgetPasswordMddleware,
+} = require("../middlewares/changePasswordMiddleware");
 const limiter = require("../middlewares/rateLimitMiddleware");
 const { roleAuthenticaton } = require("../middlewares/roleBaseAuthentication");
 const UploadSingleImage = require("../middlewares/singleImageUpload");
@@ -63,4 +69,9 @@ adminRouter.get("/adminProfileBanner", getAdminProfileAndBanner);
 // adminRouter.get("/login-background", getlo);
 adminRouter.post("/add-banks", UploadSingleImage.single("image"), addBanks);
 adminRouter.get("/get-banks", getBanks);
+
+//regarding change password routes
+adminRouter.post("/request-otp", AuthMiddleWare, requestOtp);
+adminRouter.post("/verify-otp", AuthMiddleWare, verifyOtpForAdmin);
+adminRouter.put("/change-password", forgetPasswordMddleware, changePasswprd);
 module.exports = adminRouter;

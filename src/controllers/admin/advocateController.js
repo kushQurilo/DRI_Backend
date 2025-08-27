@@ -6,7 +6,7 @@ const fs = require("fs");
 exports.addAdvocate = async (req, res, next) => {
   try {
     const imagePath = req.file.path;
-
+    console.log({ image: imagePath, body: req.body });
     const { name, whatsappNumber, contactNumber } = req.body;
     if (!name || !whatsappNumber || !contactNumber || !imagePath)
       return res

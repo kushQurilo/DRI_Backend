@@ -2,6 +2,7 @@ const csv = require("csvtojson");
 const DrisModel = require("../models/DriUserModel");
 const KYCmodel = require("../models/KYCModel");
 const EmiModel = require("../models/EMIModel");
+const advocateModel = require("../models/advocateModel");
 exports.importUsersFromCSV = async (req, res) => {
   try {
     if (!req.file) return res.status(400).json({ message: "File required" });
@@ -73,18 +74,19 @@ exports.getUsersList = async (req, res) => {
 // update user details
 exports.searchUserById = async (req, res) => {
   try {
-    console.log(req.query);
-    const search = req.query;
-    if (!id) {
+    const { search } = req.query;
+    console.log("search");
+    // validate
+    if (!search) {
       return res.status(400).json({
         success: false,
-        message: "ID query parameter is required.",
+        message: "Search query parameter is required (e.g. ?search=12345)",
       });
     }
 
-    // Use a case-insensitive regex for partial matching
+    // Search in "id" field
     const users = await DrisModel.find({
-      id: { $regex: search.id, $options: "i" }, // case-insensitive
+      id: { $regex: search, $options: "i" },
     });
 
     if (!users || users.length === 0) {
@@ -146,6 +148,67 @@ exports.getSingleUser = async (req, res) => {
       success: false,
       message: err.message,
       reason: err?.writeErrors?.[0]?.errmsg || "Unknown error",
+    });
+  }
+};
+
+// get assing advocate to user
+
+exports.getAssignAdvocate = async (req, res, next) => {
+  try {
+    const { user_id } = req;
+    if (!user_id) {
+      return res
+        .status(400)
+        .json({ success: false, message: "User Id Required" });
+    }
+    const user = await KYCmodel.findOne({ user_id });
+    if (!user) {
+      return res
+        .status(400)
+        .json({ success: false, message: "user not found" });
+    }
+    const advocate = await advocateModel
+      .findById(user.assign_advocate)
+      .select("-date -imagePublicKey -assignUsers -_id -__v");
+    if (!advocate) {
+      return res
+        .status(400)
+        .json({ success, message: "advocate not found try again..." });
+    }
+    return res.status(200).json({ success: true, data: advocate });
+  } catch (err) {
+    return res.status(500).json({
+      success: false,
+      message: err.message,
+      reason: err?.writeErrors?.[0]?.errmsg || "Unknown error",
+    });
+  }
+};
+
+// get settlement advance
+exports.getSettementAdvance = async (req, res, next) => {
+  try {
+    const { phone } = req.body;
+    if (!phone) {
+      return res.status(500).json({
+        success: false,
+        message: "phone number required",
+      });
+    }
+    const settlement = await DrisModel.findOne({ phone });
+    if (!settlement) {
+      return res.status(500).json({
+        success: false,
+        message: "no advance emi found",
+      });
+    }
+    return res.json(settlement);
+  } catch (err) {
+    return res.status(500).json({
+      success: false,
+      message: err.message,
+      reason: err?.writeErrors?.[0]?.errmsg || "something went wrong.",
     });
   }
 };

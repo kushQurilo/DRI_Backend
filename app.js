@@ -24,7 +24,7 @@ const TncRoutetr = require("./src/routes/TncRouter");
 const privacyPolicyRouter = require("./src/routes/privacyPolicyRoute");
 const QRUPIRouter = require("./src/routes/UpiAndQrRoute");
 const emiRouters = require("./src/routes/testingRoute");
-
+// require("./src/config/cron-job/nodeCron");
 const app = express();
 
 // ----------------------------

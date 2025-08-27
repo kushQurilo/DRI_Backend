@@ -1,57 +1,60 @@
-const mongoose = require('mongoose');
-const EmiSchema = mongoose.Schema({
+const mongoose = require("mongoose");
+const EmiSchema = mongoose.Schema(
+  {
     name: {
-        type: String,
-        required: true,
-        trim: true
+      type: String,
+      required: true,
+      trim: true,
     },
     phone: {
-        type: String,
-        default: '',
-        res:'DriUser'
+      type: String,
+      default: "",
+      ref: "DriUser",
     },
     credit_Cards: {
-        type: [String],
-        default: []
+      type: [String],
+      default: [],
     },
     credit_Amount: {
-        type: [String],
-        default: []
+      type: [String],
+      default: [],
     },
     CreditTotal: {
-        type: String
+      type: String,
     },
     personal_Loan: {
-        type: [String],
-        default: []
+      type: [String],
+      default: [],
     },
     PL_Amount: {
-        type: [String],
-        default: []
+      type: [String],
+      default: [],
     },
     PL_Total: {
-        type: String,
-        default: ''
+      type: String,
+      default: "",
     },
     Service_Fees: {
-        type: String,
-        default: ''
+      type: String,
+      default: "",
     },
     Service_Advance_Total: {
-        type: String,
-        default: ''
+      type: String,
+      default: "",
     },
     Final_Settlement: {
-        type: String,
-        default: ''
+      type: String,
+      default: "",
     },
     Settlement_Percent: {
-        type: String,
-        default: ''
-    }
-}, {
-    timestamps: true
-});
+      type: String,
+      default: "",
+    },
+  },
+  {
+    timestamps: true,
+  }
+);
 
-const EmiModel = new mongoose.model('emisettlement', EmiSchema);
+const EmiModel = new mongoose.model("emisettlement", EmiSchema);
 module.exports = EmiModel;

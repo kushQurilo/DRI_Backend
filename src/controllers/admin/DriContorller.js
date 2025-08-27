@@ -40,48 +40,64 @@ exports.createDRI = async (req, res, next) => {
 
 exports.updateDri = async (req, res, next) => {
   try {
-    const file = req.file.path;
-
     const { title, content, driId, public_id } = req.body;
     console.log("body", req.body);
-    if (!title || !content || !driId || !public_id) {
+
+    if (!title || !content || !driId) {
       return res
         .status(400)
         .json({ success: false, message: "Invalid Credentials." });
     }
-    const banenr = await cloudinary.uploader.destroy(public_id);
-    if (banenr?.result === "ok") {
+
+    let payload = {
+      title,
+      content,
+    };
+
+    // Agar image bheja gaya hai to update karo
+    if (req.file) {
+      const file = req.file.path;
+
+      // purani image delete karo
+      if (public_id) {
+        await cloudinary.uploader.destroy(public_id);
+      }
+
+      // nayi image upload karo
       const image = await cloudinary.uploader.upload(file, {
         folder: "driWorkAvatar",
       });
+
       fs.unlinkSync(file);
-      const payload = {
-        title,
-        content,
-        avatar: image.secure_url,
-        public_id: image.public_id,
-      };
-      const updateDRI = await DRIModel.findByIdAndUpdate(driId, payload, {
-        new: true,
-      });
-      if (!updateDRI) {
-        return res
-          .status(400)
-          .json({ success: false, message: "Failed to Update DRI Works" });
-      }
+
+      payload.avatar = image.secure_url;
+      payload.public_id = image.public_id;
+    }
+
+    // DB update
+    const updateDRI = await DRIModel.findByIdAndUpdate(driId, payload, {
+      new: true,
+    });
+
+    if (!updateDRI) {
       return res
-        .status(200)
-        .json({ success: true, message: "DRI Works Updated Successfully" });
+        .status(400)
+        .json({ success: false, message: "Failed to Update DRI Works" });
     }
 
     return res
-      .status(400)
-      .json({ success: false, message: "something went worng." });
+      .status(200)
+      .json({
+        success: true,
+        message: "DRI Works Updated Successfully",
+        data: updateDRI,
+      });
   } catch (error) {
     console.log(error);
     return res.status(500).json({ success: false, message: error.message });
   }
 };
+
 exports.DeleteDri = async (req, res, next) => {
   try {
     const { admin_id } = req;

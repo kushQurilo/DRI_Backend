@@ -1,5 +1,6 @@
 const adminModel = require("../models/adminModel");
 const advocateModel = require("../models/advocateModel");
+const DrisModel = require("../models/DriUserModel");
 const KYCmodel = require("../models/KYCModel");
 const User = require("../models/userModel");
 const cloudinary = require("../utilitis/cloudinary");
@@ -166,14 +167,16 @@ exports.ApproveByAdmin = async (req, res) => {
         message: "Failed to approve KYC",
       });
     }
-
+    console.log("updat", updateKYC);
+    const driPayload = {
+      name: updateKYC.name,
+      gender: updateKYC.gender,
+      phone: updateKYC.phone,
+    };
+    const insertDRiUserAfterAsign = await DrisModel.create(driPayload);
     return res.status(200).json({
       success: true,
       message: "KYC approved and advocate assigned",
-      data: {
-        updatedKYC: updateKYC,
-        updatedAdvocate,
-      },
     });
   } catch (error) {
     return res.status(500).json({

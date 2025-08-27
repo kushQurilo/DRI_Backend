@@ -6,7 +6,6 @@ const fs = require("fs");
 exports.createBanner = async (req, res, next) => {
   try {
     const file = req.file;
-    const hyperLink = req.body;
     if (!file) {
       return res
         .status(404)
@@ -20,7 +19,6 @@ exports.createBanner = async (req, res, next) => {
     const upload = await bannerModel.create({
       bannerImage: banner.secure_url,
       public_id: banner.public_id,
-      hyperLink,
     });
     if (!upload) {
       return res
@@ -68,11 +66,11 @@ exports.bannerWithTitle = async (req, res, next) => {
     }
 
     const bannerImage = file.path;
-    const { title } = req.body;
-    if (!title) {
+    const { title, hyperLink } = req.body;
+    if (!title || !hyperLink) {
       return res
         .status(400)
-        .json({ success: false, message: "Title is required" });
+        .json({ success: false, message: "Title and hyperLink is required" });
     }
 
     const banner = await cloudinary.uploader.upload(bannerImage, {
@@ -84,6 +82,7 @@ exports.bannerWithTitle = async (req, res, next) => {
       bannerImage: banner.secure_url,
       bannerTitle: title,
       public_id: banner.public_id,
+      hyperLink,
     };
 
     const bannerRes = await bannerWithTitle.create(paylod);
@@ -107,9 +106,9 @@ exports.bannerWithTitle = async (req, res, next) => {
 exports.updateBannerWithTitle = async (req, res, next) => {
   try {
     const bannerId = req.body.id;
-    const file = req.file;
-    const { title } = req.body;
+    const { title, hyperLink } = req.body;
 
+    // get existing banner
     const existingBanner = await bannerWithTitle.findById(bannerId);
     if (!existingBanner) {
       return res.status(404).json({
@@ -120,32 +119,35 @@ exports.updateBannerWithTitle = async (req, res, next) => {
 
     let updatedData = {};
 
-    // Update title if provided
+    // update title if provided
     if (title) {
       updatedData.bannerTitle = title;
     }
 
-    // If image file provided, update image on Cloudinary
-    if (file) {
-      // Delete old image from Cloudinary
+    if (hyperLink) {
+      updatedData.hyperLink = hyperLink;
+    }
+    // check if image file provided
+    if (req.file) {
+      // delete old image from Cloudinary (if exists)
       if (existingBanner.public_id) {
         await cloudinary.uploader.destroy(existingBanner.public_id);
       }
 
-      // Upload new image
-      const newBanner = await cloudinary.uploader.upload(file.path, {
+      // upload new image to Cloudinary
+      const newBanner = await cloudinary.uploader.upload(req.file.path, {
         folder: "Banners",
       });
 
-      // Delete local file
-      fs.unlinkSync(file.path);
+      // delete local file after upload
+      fs.unlinkSync(req.file.path);
 
-      // Update data with new Cloudinary details
+      // update DB fields
       updatedData.bannerImage = newBanner.secure_url;
       updatedData.public_id = newBanner.public_id;
     }
 
-    // Update document in DB
+    // update document in DB
     const updatedBanner = await bannerWithTitle.findByIdAndUpdate(
       bannerId,
       updatedData,
@@ -158,6 +160,7 @@ exports.updateBannerWithTitle = async (req, res, next) => {
       data: updatedBanner,
     });
   } catch (err) {
+    console.error("Error in updateBannerWithTitle:", err);
     return res.status(500).json({
       success: false,
       message: err.message,

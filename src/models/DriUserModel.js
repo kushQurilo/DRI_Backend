@@ -67,16 +67,15 @@ const userSchema = new mongoose.Schema({
     default: 0,
   },
   emiPay: {
-    type: String,
+    type: Number,
     default: 0,
   },
   status: {
     type: "String",
     default: "Pending",
   },
-  dateOfJoin: {
+  dueDate: {
     type: Date,
-    default: Date.now,
   },
   createdAt: {
     type: Date,

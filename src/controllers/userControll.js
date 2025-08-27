@@ -15,37 +15,40 @@ exports.sendOTP = async (req, res) => {
         .status(400)
         .json({ success: false, message: "Phone number is required" });
     }
+
+    // OTP generate
     const otp = Math.floor(1000 + Math.random() * 9000);
     otpStore[phone] = {
       otp,
-      expiresAt: Date.now() + 5 * 60 * 1000,
+      expiresAt: Date.now() + 5 * 60 * 1000, // 5 minutes expiry
     };
 
-    const user = await User.findOne({ phone });
-    if (user) {
-      return res.status(200).json({
-        success: true,
-        message: "OTP generated successfully",
-        otp,
-      });
+    // Check user
+    let user = await User.findOne({ phone });
+
+    if (!user) {
+      user = await User.create({ phone });
+      if (!user) {
+        return res.status(500).json({
+          success: false,
+          message:
+            "Something went wrong while processing your request. Please try again.",
+        });
+      }
     }
-    const insert = await User.create({ phone });
-    if (!insert) {
-      return res.status(200).json({
-        success: false,
-        message: "faild to login",
-        otp,
-      });
-    }
+
     return res.status(200).json({
       success: true,
-      message: "OTP generated successfully",
+      message: user ? "OTP sent successfully" : "OTP generated successfully",
       otp,
+      userId: user._id,
     });
   } catch (err) {
-    return res
-      .status(500)
-      .json({ success: false, message: "Server error", error: err.message });
+    return res.status(500).json({
+      success: false,
+      message: "Server error, please try again later.",
+      error: err.message,
+    });
   }
 };
 

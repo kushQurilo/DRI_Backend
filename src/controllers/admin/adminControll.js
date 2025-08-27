@@ -7,6 +7,9 @@ const {
 const fs = require("fs");
 const cloudinary = require("../../utilitis/cloudinary");
 const adminAndLoginBannerModel = require("../../models/adminAndLoginBannerModel");
+const { json } = require("stream/consumers");
+const otpStores = {};
+
 exports.createAdmin = async (req, res) => {
   try {
     const { name, email, phone, password, role } = req.body;
@@ -131,7 +134,7 @@ exports.uploadProfileImage = async (req, res) => {
     );
     res.status(200).json({
       message: "Profile image uploaded successfully",
-      data: user,
+      success: "Prifile Uploaded.",
     });
   } catch (error) {
     console.error(error);
@@ -261,7 +264,7 @@ exports.updateAdminDetails = async (req, res) => {
   }
 };
 
-exports.changePassword = async (req, res, next) => {
+exports.requestOtp = async (req, res, next) => {
   try {
     const { admin_id } = req;
     if (!admin_id) {
@@ -270,26 +273,31 @@ exports.changePassword = async (req, res, next) => {
         message: "Unauthorized",
       });
     }
-    const { email, newPassword } = req.body;
-    if (!email || !newPassword) {
+    const { phone } = req.body;
+    if (!phone) {
       return res.status(400).json({
         success: false,
-        message: "Email and password are required",
+        message: "phone required",
       });
     }
+    const otp = Math.floor(1000 + Math.random() * 9000);
+    otpStores[phone] = {
+      otp,
+      expiresAt: Date.now() + 5 * 60 * 1000,
+    };
     const admin = await adminModel.findById(admin_id);
     if (admin) {
-      if (admin.email === email) {
+      if (!admin.phone === phone) {
+        delete otpStores[phone];
         return res.status(400).json({
           success: false,
-          message: "Email Invaid",
+          message: "phone Invaid",
         });
       }
-      await admin.updateOne({ password: password });
-      admin.save();
-      return res.json(201).json({
+      return res.status(200).json({
         success: true,
-        message: "Password changed",
+        message: "otp send.",
+        otp,
       });
     }
     return res.status(404).json({
@@ -305,6 +313,90 @@ exports.changePassword = async (req, res, next) => {
   }
 };
 
+// send ot to admin
+exports.verifyOtpForAdmin = async (req, res) => {
+  try {
+    const { phone, otp } = req.body;
+
+    if (!phone) {
+      return res
+        .status(400)
+        .json({ success: false, message: "Phone number requred" });
+    }
+    if (!otp) {
+      return res.status(400).json({ success: false, message: "Otp Missing" });
+    }
+    const admin = await adminModel.findOne({ phone });
+    if (!admin) {
+      return res
+        .status(400)
+        .json({ success: false, message: "Invalid Admin Phone Numbber" });
+    }
+    const record = otpStores[phone];
+    if (!record || record.expiresAt < Date.now()) {
+      return res
+        .status(400)
+        .json({ success: false, message: "OTP expired or not found" });
+    }
+
+    const submittedOtp = Number(otp);
+    const storedOtp = Number(record.otp);
+    if (storedOtp !== submittedOtp) {
+      return res.status(401).json({ success: false, message: "Invalid OTP" });
+    }
+
+    const verifyToken = await jwt.sign(
+      { key: admin._id },
+      process.env.ChangePasswordKey,
+      { expiresIn: "5m" }
+    );
+    return res
+      .status(200)
+      .json({ success: true, message: "OTP verified", verifyToken });
+  } catch (error) {
+    return res.status(500).json({
+      success: false,
+      message: error.message,
+      error: error,
+    });
+  }
+};
+// change password
+exports.changePasswprd = async (req, res) => {
+  try {
+    const { key } = req;
+    const { newPassword } = req.body;
+    if (!key) {
+      return res
+        .status(400)
+        .json({ success: false, message: "verification key missing" });
+    }
+    if (!newPassword) {
+      return res.status(400).json({
+        success: false,
+        message: "New Password Missing",
+      });
+    }
+    const encryptPassword = await hashPassword(newPassword);
+    const update_password = await adminModel.findByIdAndUpdate(key, {
+      password: encryptPassword,
+    });
+    if (!update_password) {
+      return res
+        .status(400)
+        .json({ success: false, message: "Filed Try Again..." });
+    }
+    return res
+      .status(200)
+      .json({ success: true, message: "Passoword Changed" });
+  } catch (err) {
+    return res.status(500).json({
+      success: false,
+      message: "Server error",
+      error: err.message,
+    });
+  }
+};
 exports.getAdminDetails = async (req, res) => {
   try {
     const { admin_id, role } = req;

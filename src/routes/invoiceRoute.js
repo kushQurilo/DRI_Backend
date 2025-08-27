@@ -18,7 +18,7 @@ InvoiceRouter.post(
   UploadSingleImage.single("pdf"),
   uploadInvoice
 );
-InvoiceRouter.get("/get-invoice/:user_id", getInvoices);
+InvoiceRouter.get("/get-invoice", getInvoices);
 InvoiceRouter.get("/", viewInvoice);
 
 module.exports = InvoiceRouter;

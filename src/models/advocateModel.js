@@ -20,7 +20,7 @@ const advocateSchema = mongoose.Schema(
     },
     date: {
       type: Date,
-      default: Date.now().toLocaleString(),
+      default: Date.now(),
     },
     assignUsers: {
       type: [String],
